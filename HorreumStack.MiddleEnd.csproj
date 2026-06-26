@@ -4,10 +4,18 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>72d2d85a-735a-47fb-b9b6-20357d803e5d</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HorreumStack.Domain\HorreumStack.Domain.csproj" />
+    <ProjectReference Include="..\HorreumStack.Infrastructure\HorreumStack.Infrastructure.csproj" />
+    <ProjectReference Include="..\HorreumStack.Utilities\HorreumStack.Utilities.csproj" />
   </ItemGroup>
 
 </Project>
