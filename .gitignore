@@ -1,0 +1,20 @@
+## Ignore Visual Studio / .NET Core build artifact directories
+[Db]in/
+[Oo]bj/
+[Rr]elease/
+[Xx]64/
+[Xx]86/
+[Aa]rm/
+[Aa]rm64/
+
+# Visual Studio cache, preferences, and user files
+.vs/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+*.sln.docstate
+
+# Rider and Resharper
+.idea/
+*.sln.iml
