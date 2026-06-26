@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using HorreumStack.Infrastructure.Repositories;
 using HorreumStack.Domain.Entities;
+using HorreumStack.MiddleEnd.Core.Features.Almacenes;
+using HorreumStack.Identity.Core.Application.Features.Users;
 
 namespace HorreumStack.MiddleEnd.Controllers;
 
@@ -11,10 +13,27 @@ namespace HorreumStack.MiddleEnd.Controllers;
 public class AlmacenesController : ControllerBase
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IAlmacenService _almacenService;
+    private readonly IUserService _userService;
 
-    public AlmacenesController(IUnitOfWork unitOfWork)
+    public AlmacenesController(IUnitOfWork unitOfWork, IAlmacenService almacenService, IUserService userService)
     {
         _unitOfWork = unitOfWork;
+        _almacenService = almacenService;
+        _userService = userService;
+    }
+
+    [HttpGet("getallforme")]
+    public async Task<IActionResult> GetAllForMe()
+    {
+        var token = Request.Headers["Authorization"];
+        Guid userId = await _userService.GetUserIdByTokenAsync(token.ToString().Replace("Bearer ", ""), CancellationToken.None);
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+        var almacenes = await _almacenService.GetListByUserIdAsync(userId);
+        return Ok(almacenes);
     }
 
     [HttpGet]
@@ -93,10 +112,4 @@ public class AlmacenesController : ControllerBase
 
         return Ok(new { Message = "Almacén eliminado correctamente." });
     }
-}
-
-public class AlmacenDto
-{
-    public string Codigo { get; set; } = string.Empty;
-    public string Nombre { get; set; } = string.Empty;
 }

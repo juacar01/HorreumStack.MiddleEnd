@@ -4,13 +4,41 @@ using System.Text;
 using HorreumStack.Infrastructure;
 using HorreumStack.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using HorreumStack.MiddleEnd.Core.Features.Almacenes;
+using HorreumStack.MiddleEnd.Core.Mappings;
+using HorreumStack.Utilities.Security;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddScoped<IJwtHelper, JwtHelperService>();
+
+if (!builder.Environment.IsDevelopment())
+{
+    var keyVaultUri = builder.Configuration["KeyVault:Uri"];
+    if (!string.IsNullOrEmpty(keyVaultUri))
+    {
+        builder.Configuration.AddAzureKeyVault(
+            new Uri(keyVaultUri),
+            new Azure.Identity.DefaultAzureCredential());
+    }
+}
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
+var mapperConfig = new AutoMapper.MapperConfiguration(cfg =>
+{
+    cfg.AddProfile(new MappingProfile());
+}, Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+var mapper = mapperConfig.CreateMapper();
+builder.Services.AddSingleton(mapper);
+
+builder.Services.AddScoped<IAlmacenService, AlmacenService>();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.EnableAnnotations();
+});
 
 // Add DbContext and Infrastructure Services
 builder.Services.AddInfrastructureServices(builder.Configuration);
@@ -74,6 +102,12 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.DocumentTitle = "MiddleEnd API Explorer";
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "API v1");
+    });
 }
 
 app.UseCors("myAllowSpecificOrigins");

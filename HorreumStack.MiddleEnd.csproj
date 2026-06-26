@@ -10,12 +10,19 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.9" />
+    <PackageReference Include="AutoMapper" Version="16.1.1" />
+    <PackageReference Include="MediatR" Version="14.1.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
+    <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="10.2.3" />
+    <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.5.1" />
+    <PackageReference Include="Azure.Identity" Version="1.21.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\HorreumStack.Domain\HorreumStack.Domain.csproj" />
     <ProjectReference Include="..\HorreumStack.Infrastructure\HorreumStack.Infrastructure.csproj" />
     <ProjectReference Include="..\HorreumStack.Utilities\HorreumStack.Utilities.csproj" />
+    <ProjectReference Include="..\HorreumStack.Application\HorreumStack.Application.csproj" />
   </ItemGroup>
 
 </Project>
