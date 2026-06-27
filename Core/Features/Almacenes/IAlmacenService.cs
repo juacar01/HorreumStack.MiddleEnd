@@ -8,7 +8,7 @@ public interface IAlmacenService
     Task<AlmacenDto> GetByIdAsync(Guid id);
     Task<AlmacenDto> GetByCodeAsync(string code);
     Task<List<AlmacenDto>> GetListByUserIdAsync(Guid userId);
-    Task<AlmacenDto> CreateAsync(AlmacenDto model);
+    Task<AlmacenDto> CreateAsync(AlmacenDto model, Guid userId);
     Task<AlmacenDto> UpdateAsync(Guid id, AlmacenDto model);
     Task<bool> DeleteAsync(Guid id);
 }

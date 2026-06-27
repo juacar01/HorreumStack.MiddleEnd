@@ -28,12 +28,12 @@ public class AlmacenesController : ControllerBase
     public async Task<IActionResult> GetAllForMe()
     {
         var token = Request.Headers["Authorization"];
-        Guid userId = await _userService.GetUserIdByTokenAsync(token.ToString().Replace("Bearer ", ""), CancellationToken.None);
+        Guid? userId = await _userService.GetUserIdByTokenAsync(token.ToString().Replace("Bearer ", ""), CancellationToken.None);
         if (userId == null)
         {
             return Unauthorized();
         }
-        var almacenes = await _almacenService.GetListByUserIdAsync(userId);
+        var almacenes = await _almacenService.GetListByUserIdAsync(userId.Value);
         return Ok(almacenes);
     }
 
@@ -55,22 +55,22 @@ public class AlmacenesController : ControllerBase
         return Ok(almacen);
     }
 
-    [HttpPost]
+    [HttpPost("create")]
     public async Task<IActionResult> Create([FromBody] AlmacenDto model)
     {
+        var token = Request.Headers["Authorization"];
+        Guid? userId = await _userService.GetUserIdByTokenAsync(token.ToString().Replace("Bearer ", ""), CancellationToken.None);
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
         if (string.IsNullOrEmpty(model.Codigo) || string.IsNullOrEmpty(model.Nombre))
         {
             return BadRequest("El código y el nombre son obligatorios.");
         }
 
-        var almacen = new Almacen
-        {
-            Codigo = model.Codigo,
-            Nombre = model.Nombre
-        };
-
-        await _unitOfWork.Repository<Almacen>().AddAsync(almacen);
-        await _unitOfWork.Complete();
+        var almacen = await _almacenService.CreateAsync(model, userId.Value);
 
         return CreatedAtAction(nameof(GetById), new { id = almacen.Id }, almacen);
     }

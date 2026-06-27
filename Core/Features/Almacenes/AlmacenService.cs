@@ -2,6 +2,8 @@ using System.Linq.Expressions;
 using HorreumStack.Domain.Entities;
 using AutoMapper;
 using HorreumStack.Infrastructure.Repositories;
+using HorreumStack.Domain.Entities.Common;
+using HorreumStack.Domain.Enums;
 
 namespace HorreumStack.MiddleEnd.Core.Features.Almacenes;
 
@@ -22,12 +24,12 @@ public class AlmacenService : IAlmacenService
         throw new NotImplementedException();
     }
 
-    public Task<AlmacenDto> GetByIdAsync(Guid id)
+    public async Task<AlmacenDto> GetByIdAsync(Guid id)
     {
         throw new NotImplementedException();
     }
 
-    public Task<AlmacenDto> GetByCodeAsync(string code)
+    public async Task<AlmacenDto> GetByCodeAsync(string code)
     {
         throw new NotImplementedException();
     }
@@ -50,18 +52,59 @@ public class AlmacenService : IAlmacenService
         return _mapper.Map<List<AlmacenDto>>(almacenes);
     }
 
-    public Task<AlmacenDto> CreateAsync(AlmacenDto model)
+    public async Task<AlmacenDto> CreateAsync(AlmacenDto model, Guid userId)
     {
-        throw new NotImplementedException();
+        var almacen = _mapper.Map<Almacen>(model);
+        almacen.Id = Guid.NewGuid();
+        almacen.CreatedAt = DateTime.UtcNow;
+        almacen.CreatedBy = userId.ToString();
+        almacen.LastModifiedAt = DateTime.UtcNow;
+        almacen.LastModifiedBy = userId.ToString();
+
+        var userAlmacen = new AlmacenUser
+        {
+            UserId = userId,
+            AlmacenId = almacen.Id,
+            Role = AlmacenUserRole.Owner
+        };
+
+        await _unitOfWork.Repository<Almacen>().AddAsync(almacen);
+        await _unitOfWork.Repository<AlmacenUser>().AddAsync(userAlmacen);
+        await _unitOfWork. Complete();
+
+        return _mapper.Map<AlmacenDto>(almacen);
     }
 
-    public Task<AlmacenDto> UpdateAsync(Guid id, AlmacenDto model)
+    public async Task<AlmacenDto> UpdateAsync(Guid id, AlmacenDto model)
     {
-        throw new NotImplementedException();
+        var existing = await _unitOfWork.Repository<Almacen>().GetByIdAsync(id);
+        if (existing == null)
+            throw new KeyNotFoundException($"Almacén con ID {id} no encontrado");
+
+        // Solo permitir actualizar ciertos campos
+        existing.Nombre = model.Nombre;
+        existing.LastModifiedAt = DateTime.UtcNow;
+
+        await _unitOfWork.Repository<Almacen>().UpdateAsync(existing);
+        await _unitOfWork.Complete();
+
+        return _mapper.Map<AlmacenDto>(existing);
     }
 
-    public Task<bool> DeleteAsync(Guid id)
+    public async Task<bool> DeleteAsync(Guid id)
     {
-        throw new NotImplementedException();
+        var existing = await _unitOfWork.Repository<Almacen>().GetByIdAsync(id);
+        if (existing == null)
+            return false;
+
+        // Desactivar en lugar de borrar (recomendado para FKs)
+        existing.Status = AlmacenStatus.Deleted;
+        existing.IsDeleted = true;
+        existing.LastModifiedAt = DateTime.UtcNow;
+
+        await _unitOfWork.Repository<Almacen>().UpdateAsync(existing);
+        await _unitOfWork.Complete();
+
+        return true;
     }
 }

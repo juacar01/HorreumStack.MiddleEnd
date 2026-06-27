@@ -46,17 +46,17 @@ public class UserService : IUserService
         return _mapper.Map<UserVm>(user);
     }
 
-    public async Task<Guid> GetUserIdByTokenAsync(string token, CancellationToken cancellationToken)
+    public async Task<Guid?> GetUserIdByTokenAsync(string token, CancellationToken cancellationToken)
     {
         var userIdStr = _jwtHelper.GetUserIdFromToken(token);
         if (string.IsNullOrEmpty(userIdStr) || !Guid.TryParse(userIdStr, out var userId))
         {
-            return Guid.Empty;
+            return null;
         }
         var user = await GetUserByIdAsync(userId, cancellationToken);
         if (user == null)
         {
-            return Guid.Empty;
+            return null;
         }
         return user.Id;
     }
