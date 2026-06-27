@@ -4,7 +4,7 @@ using HorreumStack.Domain.Entities;
 using HorreumStack.Infrastructure.Repositories;
 using HorreumStack.Utilities.Security;
 
-namespace HorreumStack.Identity.Core.Application.Features.Users;
+namespace HorreumStack.MiddleEnd.Core.Features.Users;
 
 public class UserService : IUserService
 {

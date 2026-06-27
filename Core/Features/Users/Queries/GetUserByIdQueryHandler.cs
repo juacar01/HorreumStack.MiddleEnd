@@ -4,12 +4,12 @@ using HorreumStack.Infrastructure.Repositories;
 using MediatR;
 using System.Linq.Expressions;
 
-namespace HorreumStack.Identity.Core.Application.Features.Users.Queries;
+namespace HorreumStack.MiddleEnd.Core.Features.Users.Queries;
 
 public class GetUserByIdQueryHandler : IRequestHandler<GetUserByIdQuery, UserVm>
 {
-    private IUnitOfWork _unitOfWork;
-    private IMapper _mapper;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IMapper _mapper;
 
     public GetUserByIdQueryHandler(IUnitOfWork unitOfWork, IMapper mapper)
     {

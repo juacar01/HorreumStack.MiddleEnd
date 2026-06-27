@@ -7,8 +7,11 @@ using Microsoft.EntityFrameworkCore;
 using HorreumStack.MiddleEnd.Core.Features.Almacenes;
 using HorreumStack.MiddleEnd.Core.Mappings;
 using HorreumStack.Utilities.Security;
+using HorreumStack.MiddleEnd.Core.Application;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddInfrastructureServices(builder.Configuration);
+builder.Services.AddLocalApplicationServices(builder.Configuration);
 
 builder.Services.AddScoped<IJwtHelper, JwtHelperService>();
 
@@ -117,5 +120,23 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+using (var scope = app.Services.CreateScope())
+{
+    var service = scope.ServiceProvider;
+    var loggerFactory = service.GetRequiredService<ILoggerFactory>();
+
+    try
+    {
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        context.Database.Migrate();
+
+    }
+    catch (Exception ex)
+    {
+        var logger = loggerFactory.CreateLogger<Program>();
+        logger.LogError(ex, "Ocurrio un error durante la migracion de la base de datos");
+    }
+}
 
 app.Run();

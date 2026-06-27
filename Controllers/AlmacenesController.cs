@@ -3,7 +3,8 @@ using Microsoft.AspNetCore.Authorization;
 using HorreumStack.Infrastructure.Repositories;
 using HorreumStack.Domain.Entities;
 using HorreumStack.MiddleEnd.Core.Features.Almacenes;
-using HorreumStack.Identity.Core.Application.Features.Users;
+using HorreumStack.MiddleEnd.Core.Features.Users;
+
 
 namespace HorreumStack.MiddleEnd.Controllers;
 

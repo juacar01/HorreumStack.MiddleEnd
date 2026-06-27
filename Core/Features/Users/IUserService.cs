@@ -1,4 +1,4 @@
-namespace HorreumStack.Identity.Core.Application.Features.Users;
+namespace HorreumStack.MiddleEnd.Core.Features.Users;
 
 public interface IUserService
 {

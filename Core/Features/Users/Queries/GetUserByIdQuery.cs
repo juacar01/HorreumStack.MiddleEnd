@@ -1,7 +1,7 @@
 ﻿
 using MediatR;
 
-namespace HorreumStack.Identity.Core.Application.Features.Users.Queries;
+namespace HorreumStack.MiddleEnd.Core.Features.Users.Queries;
 
 public class GetUserByIdQuery : IRequest<UserVm>
 {
