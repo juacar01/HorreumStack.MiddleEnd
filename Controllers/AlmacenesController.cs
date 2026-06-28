@@ -34,7 +34,7 @@ public class AlmacenesController : ControllerBase
             return Unauthorized();
         }
         var almacenes = await _almacenService.GetListByUserIdAsync(userId.Value);
-        return Ok(almacenes);
+        return Ok(new { almacenes = almacenes, userId = userId });
     }
 
     [HttpGet]
@@ -47,11 +47,15 @@ public class AlmacenesController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(Guid id)
     {
-        var almacen = await _unitOfWork.Repository<Almacen>().GetEntityAsync(a => a.Id == id);
-        if (almacen == null)
+        var token = Request.Headers["Authorization"];
+        Guid? userId = await _userService.GetUserIdByTokenAsync(token.ToString().Replace("Bearer ", ""), CancellationToken.None);
+        if (userId == null)
         {
-            return NotFound("Almacén no encontrado.");
+            return Unauthorized();
         }
+        var almacen = await _almacenService.GetByIdAsync(id, userId.Value);
+        if (almacen == null || almacen.Codigo == null) return NotFound("Almacén no encontrado.");
+
         return Ok(almacen);
     }
 
@@ -71,8 +75,12 @@ public class AlmacenesController : ControllerBase
         }
 
         var almacen = await _almacenService.CreateAsync(model, userId.Value);
+        if (almacen.Id == null) return BadRequest("Error al crear el almacén.");
 
-        return CreatedAtAction(nameof(GetById), new { id = almacen.Id }, almacen);
+        var almacenresult = await _almacenService.GetByIdAsync((Guid)almacen.Id, userId.Value);
+        if (almacenresult == null) return BadRequest("Error al obtener el almacén.");
+
+        return CreatedAtAction(nameof(GetById), new { id = almacen.Id }, almacenresult);
     }
 
     [HttpPut("{id}")]

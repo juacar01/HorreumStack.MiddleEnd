@@ -4,6 +4,10 @@ using AutoMapper;
 using HorreumStack.Infrastructure.Repositories;
 using HorreumStack.Domain.Entities.Common;
 using HorreumStack.Domain.Enums;
+using HorreumStack.MiddleEnd.Core.Constants;
+using Microsoft.Identity.Client;
+using HorreumStack.MiddleEnd.Core.Features.Users;
+using HorreumStack.MiddleEnd.Core.Features.Ubicaciones;
 
 namespace HorreumStack.MiddleEnd.Core.Features.Almacenes;
 
@@ -24,9 +28,108 @@ public class AlmacenService : IAlmacenService
         throw new NotImplementedException();
     }
 
-    public async Task<AlmacenDto> GetByIdAsync(Guid id)
+    public async Task<AlmacenResponse> GetByIdAsync(Guid id, Guid userId)
     {
-        throw new NotImplementedException();
+        var includesAlmacenes = new List<Expression<Func<Almacen, object>>>
+        {
+            au => au.SubAlmacenes,
+            au => au.Ubicaciones,
+            au => au.AlmacenUsers
+        };
+
+        var almacen = await _unitOfWork.Repository<Almacen>().GetEntityAsync(
+            a => a.Id == id && a.Status == AlmacenStatus.Active,
+            includesAlmacenes,
+            true
+        );
+
+        if (almacen == null)
+        {
+            return null!;
+        }
+
+        var subalmacenes = almacen.SubAlmacenes.Where(sa => sa.Status == AlmacenStatus.Active).ToList();
+
+        AlmacenResponse response = _mapper.Map<AlmacenResponse>(almacen);
+
+        // Buscar el propietario del almacén a través de AlmacenUser
+        var ownerRelation = await _unitOfWork.Repository<AlmacenUser>().GetEntityAsync(
+            au => au.AlmacenId == id && au.Role == AlmacenUserRole.Owner,
+            new List<Expression<Func<AlmacenUser, object>>> { au => au.User },
+            true
+        );
+
+        // Si no se encuentra relación directa y tiene padre, buscar el propietario del padre
+        if (ownerRelation == null && almacen.PadreAlmacenId.HasValue)
+        {
+            ownerRelation = await _unitOfWork.Repository<AlmacenUser>().GetEntityAsync(
+                au => au.AlmacenId == almacen.PadreAlmacenId.Value && au.Role == AlmacenUserRole.Owner,
+                new List<Expression<Func<AlmacenUser, object>>> { au => au.User },
+                true
+            );
+        }
+
+        Guid ownerId = Guid.Empty;
+        string ownerName = string.Empty;
+        bool isMine = false;
+
+        if (ownerRelation != null)
+        {
+            UserDto userOwnerDto = _mapper.Map<UserDto>(ownerRelation.User);
+            ownerId = userOwnerDto.Id;
+            ownerName = userOwnerDto.Fullname;
+            isMine = userOwnerDto.Id == userId;
+        }
+
+        response.IsMine = isMine;
+        response.OwnerName = ownerName;
+        response.OwnerId = ownerId;
+
+        // Si tiene un almacén padre, obtener sus datos y asignarlos
+        if (almacen.PadreAlmacenId.HasValue)
+        {
+            var padre = await _unitOfWork.Repository<Almacen>().GetEntityAsync(
+                p => p.Id == almacen.PadreAlmacenId.Value && p.Status == AlmacenStatus.Active,
+                null,
+                true
+            );
+            if (padre != null)
+            {
+                var padreDto = _mapper.Map<AlmacenDto>(padre);
+                padreDto.IsMine = isMine;
+                padreDto.OwnerId = ownerId;
+                padreDto.OwnerName = ownerName;
+                response.Parent = padreDto;
+            }
+        }
+
+        response.SubAlmacenes = subalmacenes.Select(sa =>
+        {
+            var dto = _mapper.Map<AlmacenDto>(sa);
+            dto.IsMine = isMine;
+            dto.OwnerName = ownerName;
+            dto.OwnerId = ownerId;
+            return dto;
+        }).ToList();
+
+        //obtener invitados
+        //TODO: Implementar invitados, realizar el rpoceso de registro o login para aceptar 
+        /*var invitados = await _unitOfWork.Repository<AlmacenUser>().GetAsync(
+            au => au.AlmacenId == id && au.Status == AlmacenUserStatus.Active && au.UserId != userId,
+            null,
+            null,
+            true
+        );
+
+        var invitadosDto = invitados.Select(inv =>
+        {
+            var dto = _mapper.Map<UserDto>(inv.User);
+            return dto;
+        }).ToList();
+
+        response.Invitados = invitadosDto;
+*/
+        return response;
     }
 
     public async Task<AlmacenDto> GetByCodeAsync(string code)
@@ -34,28 +137,41 @@ public class AlmacenService : IAlmacenService
         throw new NotImplementedException();
     }
 
+    //solo se obtienen los almacenes principales que no tiene padre
     public async Task<List<AlmacenDto>> GetListByUserIdAsync(Guid userId)
     {
         var includes = new List<Expression<Func<AlmacenUser, object>>>
         {
-            au => au.Almacen
+            au => au.Almacen,
+            au => au.User
         };
 
         var userAlmacenes = await _unitOfWork.Repository<AlmacenUser>().GetAsync(
-            au => au.UserId == userId,
+            au => au.UserId == userId && au.Status == AlmacenUserStatus.Active && au.Almacen.PadreAlmacenId == null,
             null,
             includes,
             true
         );
 
-        var almacenes = userAlmacenes.Select(au => au.Almacen).ToList();
-        return _mapper.Map<List<AlmacenDto>>(almacenes);
+        var dtos = userAlmacenes.Select(au =>
+        {
+            var dto = _mapper.Map<AlmacenDto>(au.Almacen);
+            dto.IsMine = au.Role == AlmacenUserRole.Owner;
+            dto.OwnerName = au.User.Fullname;
+            dto.OwnerId = au.User.Id;
+            return dto;
+        }).ToList();
+
+        return dtos;
     }
 
     public async Task<AlmacenDto> CreateAsync(AlmacenDto model, Guid userId)
     {
+        var codigoGenerado = string.IsNullOrEmpty(model.Codigo) ? Guid.NewGuid().ToString().Substring(0, 8) : model.Codigo;
         var almacen = _mapper.Map<Almacen>(model);
         almacen.Id = Guid.NewGuid();
+        almacen.Codigo = AppConstants.Almacenes.PrefixCodigo + codigoGenerado;
+        almacen.PadreAlmacenId = model.PadreAlmacenId == Guid.Empty || model.PadreAlmacenId == null ? null : model.PadreAlmacenId;
         almacen.CreatedAt = DateTime.UtcNow;
         almacen.CreatedBy = userId.ToString();
         almacen.LastModifiedAt = DateTime.UtcNow;
@@ -68,9 +184,23 @@ public class AlmacenService : IAlmacenService
             Role = AlmacenUserRole.Owner
         };
 
+        var ubicacionAlmacen = new Ubicacion
+        {
+            Id = Guid.NewGuid(),
+            AlmacenId = almacen.Id,
+            Nombre = almacen.Nombre,
+            IsPrincipal = true,
+            Codigo = AppConstants.Ubicaciones.PrefixCodigo + codigoGenerado,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = userId.ToString(),
+            LastModifiedAt = DateTime.UtcNow,
+            LastModifiedBy = userId.ToString()
+        };
+
         await _unitOfWork.Repository<Almacen>().AddAsync(almacen);
         await _unitOfWork.Repository<AlmacenUser>().AddAsync(userAlmacen);
-        await _unitOfWork. Complete();
+        await _unitOfWork.Repository<Ubicacion>().AddAsync(ubicacionAlmacen);
+        await _unitOfWork.Complete();
 
         return _mapper.Map<AlmacenDto>(almacen);
     }

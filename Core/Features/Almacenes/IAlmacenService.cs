@@ -5,7 +5,7 @@ namespace HorreumStack.MiddleEnd.Core.Features.Almacenes;
 public interface IAlmacenService
 {
     Task<List<AlmacenDto>> GetAllAsync();
-    Task<AlmacenDto> GetByIdAsync(Guid id);
+    Task<AlmacenResponse> GetByIdAsync(Guid id, Guid userId);
     Task<AlmacenDto> GetByCodeAsync(string code);
     Task<List<AlmacenDto>> GetListByUserIdAsync(Guid userId);
     Task<AlmacenDto> CreateAsync(AlmacenDto model, Guid userId);
