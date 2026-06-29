@@ -20,10 +20,20 @@ namespace HorreumStack.MiddleEnd.Core.Constants
         public static class Almacenes
         {
             public const string PrefixCodigo = "ALM-";
-        }           
+        }
         public static class Ubicaciones
         {
             public const string PrefixCodigo = "UBI-";
-        }   
+        }
+        public static class Proyectos
+        {
+            public const string PrefixCodigo = "PRY-";
+        }
+        public static class UbicacionesTipos
+        {
+            public const string PrefixCodigo = "UTI-";
+        }
+
+
     }
 }

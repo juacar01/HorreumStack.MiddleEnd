@@ -1,11 +1,20 @@
-using HorreumStack.MiddleEnd.Core.Features.Ubicaciones;
-using HorreumStack.MiddleEnd.Core.Features.Users;
+using HorreumStack.Domain.Enums;
+using HorreumStack.Domain.Entities;
+using HorreumStack.MiddleEnd.Core.Features.Proyectos;
 
 namespace HorreumStack.MiddleEnd.Core.Features.Almacenes;
 
-public class AlmacenResponse : AlmacenDto
+public class AlmacenResponse
 {
-    public List<AlmacenDto> SubAlmacenes { get; set; } = new List<AlmacenDto>();
-    public List<UserDto> Invitados { get; set; } = new List<UserDto>();
+    public Guid Id { get; set; } = Guid.Empty;
+    public string Codigo { get; set; } = string.Empty;
+    public string Nombre { get; set; } = string.Empty;
+    public bool IsPrincipal { get; set; } = false;
+    public Guid ProyectoId { get; set; } = Guid.Empty;
+    public ProyectoResponse Proyecto { get; set; } = null!;
+    public AlmacenStatus Status { get; set; } = AlmacenStatus.Active;
+    public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? LastModifiedAt { get; set; }
+
 }
 

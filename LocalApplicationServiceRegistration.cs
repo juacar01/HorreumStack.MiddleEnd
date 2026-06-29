@@ -1,5 +1,6 @@
 using AutoMapper;
 using HorreumStack.MiddleEnd.Core.Features.Almacenes;
+using HorreumStack.MiddleEnd.Core.Features.Proyectos;
 using HorreumStack.MiddleEnd.Core.Features.Users;
 using HorreumStack.MiddleEnd.Core.Mappings;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -25,6 +26,7 @@ public static class ApplicationServiceRegistration
 
         services.AddScoped<IAlmacenService, AlmacenService>();
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IProyectoService, ProyectoService>();
 
 
         return services;

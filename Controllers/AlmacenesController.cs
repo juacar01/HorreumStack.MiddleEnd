@@ -24,23 +24,10 @@ public class AlmacenesController : ControllerBase
         _userService = userService;
     }
 
-    [HttpGet("getallforme")]
-    public async Task<IActionResult> GetAllForMe()
-    {
-        var token = Request.Headers["Authorization"];
-        Guid? userId = await _userService.GetUserIdByTokenAsync(token.ToString().Replace("Bearer ", ""), CancellationToken.None);
-        if (userId == null)
-        {
-            return Unauthorized();
-        }
-        var almacenes = await _almacenService.GetListByUserIdAsync(userId.Value);
-        return Ok(new { almacenes = almacenes, userId = userId });
-    }
-
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var almacenes = await _unitOfWork.Repository<Almacen>().GetAllAsync();
+        var almacenes = await _almacenService.GetAllAsync();
         return Ok(almacenes);
     }
 
@@ -91,20 +78,15 @@ public class AlmacenesController : ControllerBase
             return BadRequest("El código y el nombre son obligatorios.");
         }
 
-        var almacen = await _unitOfWork.Repository<Almacen>().GetEntityAsync(a => a.Id == id);
-        if (almacen == null)
+        try
+        {
+            var updated = await _almacenService.UpdateAsync(id, model);
+            return Ok(updated);
+        }
+        catch (KeyNotFoundException)
         {
             return NotFound("Almacén no encontrado.");
         }
-
-        almacen.Codigo = model.Codigo;
-        almacen.Nombre = model.Nombre;
-        almacen.LastModifiedAt = DateTime.UtcNow;
-
-        await _unitOfWork.Repository<Almacen>().UpdateAsync(almacen);
-        await _unitOfWork.Complete();
-
-        return Ok(almacen);
     }
 
     [HttpDelete("{id}")]
