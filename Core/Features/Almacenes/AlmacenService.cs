@@ -8,6 +8,7 @@ using HorreumStack.MiddleEnd.Core.Constants;
 using Microsoft.Identity.Client;
 using HorreumStack.MiddleEnd.Core.Features.Users;
 using HorreumStack.MiddleEnd.Core.Features.Ubicaciones;
+using HorreumStack.MiddleEnd.Core.Features.Proyectos;
 
 namespace HorreumStack.MiddleEnd.Core.Features.Almacenes;
 
@@ -16,11 +17,13 @@ public class AlmacenService : IAlmacenService
 
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
+    private readonly IProyectoService _proyectoService;
 
-    public AlmacenService(IUnitOfWork unitOfWork, IMapper mapper)
+    public AlmacenService(IUnitOfWork unitOfWork, IMapper mapper, IProyectoService proyectoService)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
+        _proyectoService = proyectoService;
     }
 
     public async Task<List<AlmacenDto>> GetAllAsync()
@@ -60,9 +63,17 @@ public class AlmacenService : IAlmacenService
 
     public async Task<AlmacenDto> CreateAsync(AlmacenDto model, Guid userId)
     {
+        bool isPrincipal = false;
+        if (model.ProyectoId != Guid.Empty)
+        {
+            var proyecto = await _proyectoService.GetByIdAsync(model.ProyectoId, userId);
+            isPrincipal = proyecto!.IsPrincipal;
+        }
+
         var codigoGenerado = string.IsNullOrEmpty(model.Codigo) ? Guid.NewGuid().ToString().Substring(0, 8) : model.Codigo;
         var almacen = _mapper.Map<Almacen>(model);
         almacen.Id = Guid.NewGuid();
+        almacen.IsPrincipal = isPrincipal;
         almacen.Codigo = AppConstants.Almacenes.PrefixCodigo + codigoGenerado;
         almacen.CreatedAt = DateTime.UtcNow;
         almacen.CreatedBy = userId.ToString();
@@ -97,6 +108,7 @@ public class AlmacenService : IAlmacenService
 
         // Solo permitir actualizar ciertos campos
         existing.Nombre = model.Nombre;
+        existing.Codigo = AppConstants.Almacenes.PrefixCodigo + model.Codigo.Replace(AppConstants.Almacenes.PrefixCodigo, "");
         existing.LastModifiedAt = DateTime.UtcNow;
 
         await _unitOfWork.Repository<Almacen>().UpdateAsync(existing);

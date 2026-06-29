@@ -17,11 +17,13 @@ public class ProyectoService : IProyectoService
 
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
+    private readonly IUserService _userService;
 
-    public ProyectoService(IUnitOfWork unitOfWork, IMapper mapper)
+    public ProyectoService(IUnitOfWork unitOfWork, IMapper mapper, IUserService userService)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
+        _userService = userService;
     }
 
     public async Task<List<ProyectoDto>> GetAllAsync()
@@ -81,12 +83,20 @@ public class ProyectoService : IProyectoService
 
     public async Task<ProyectoDto> CreateAsync(ProyectoDto model, Guid userId)
     {
+        UserVm userDto = await _userService.GetUserByIdAsync(userId);
+
+        if (userDto == null)
+        {
+            throw new Exception("Usuario no encontrado");
+        }
+        bool IsPrincipal = userDto.Proyectos.Count == 0;
+
         var codigoGenerado = string.IsNullOrEmpty(model.Codigo) ? Guid.NewGuid().ToString().Substring(0, 8) : model.Codigo;
         var proyecto = _mapper.Map<Proyecto>(model);
         proyecto.Id = Guid.NewGuid();
         proyecto.Codigo = AppConstants.Proyectos.PrefixCodigo + codigoGenerado;
         proyecto.OwnerId = userId;
-        proyecto.IsPrincipal = true;
+        proyecto.IsPrincipal = IsPrincipal;
         proyecto.CreatedAt = DateTime.UtcNow;
         proyecto.CreatedBy = userId.ToString();
         proyecto.LastModifiedAt = DateTime.UtcNow;
@@ -157,6 +167,7 @@ public class ProyectoService : IProyectoService
 
         // Solo permitir actualizar ciertos campos
         existing.Nombre = model.Nombre;
+        existing.Codigo = AppConstants.Proyectos.PrefixCodigo + model.Codigo.Replace(AppConstants.Proyectos.PrefixCodigo, "");
         existing.LastModifiedAt = DateTime.UtcNow;
 
         await _unitOfWork.Repository<Proyecto>().UpdateAsync(existing);

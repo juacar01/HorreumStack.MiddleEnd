@@ -11,12 +11,18 @@ public class MappingProfile : Profile
 {
     public MappingProfile()
     {
-        CreateMap<User, UserVm>().ReverseMap();
-        CreateMap<User, UserDto>().ReverseMap();
+        CreateMap<User, UserVm>()
+            .ForMember(dest => dest.Proyectos, opt => opt.MapFrom(src => src.ProyectoUsers.Select(pu => pu.Proyecto)))
+            .ReverseMap();
+        CreateMap<User, UserDto>()
+            .ForMember(dest => dest.Proyectos, opt => opt.MapFrom(src => src.ProyectoUsers.Select(pu => pu.Proyecto)))
+            .ReverseMap();
 
         CreateMap<Proyecto, ProyectoDto>().ReverseMap();
-        CreateMap<Proyecto, ProyectoResponse>().ReverseMap();
-        CreateMap<Proyecto, ProyectoDetailResponse>().ReverseMap();
+        CreateMap<Proyecto, ProyectoResponse>()
+            .ForMember(dest => dest.IsMine, opt => opt.MapFrom<IsMineResolver>())
+            .ReverseMap();
+        CreateMap<Proyecto, ProyectoDetailResponse>().IncludeBase<Proyecto, ProyectoResponse>().ReverseMap();
 
         CreateMap<Almacen, AlmacenDto>().ReverseMap();
         CreateMap<Almacen, AlmacenResponse>().ReverseMap();

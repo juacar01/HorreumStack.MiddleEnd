@@ -8,6 +8,7 @@ using HorreumStack.MiddleEnd.Core.Features.Almacenes;
 using HorreumStack.MiddleEnd.Core.Mappings;
 using HorreumStack.Utilities.Security;
 using HorreumStack.MiddleEnd.Core.Application;
+using AutoMapper;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddInfrastructureServices(builder.Configuration);
@@ -34,12 +35,15 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IsMineResolver>();
+
 var mapperConfig = new AutoMapper.MapperConfiguration(cfg =>
 {
     cfg.AddProfile(new MappingProfile());
 }, Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
-var mapper = mapperConfig.CreateMapper();
-builder.Services.AddSingleton(mapper);
+
+builder.Services.AddScoped<IMapper>(sp => new Mapper(mapperConfig, sp.GetService));
 
 builder.Services.AddScoped<IAlmacenService, AlmacenService>();
 builder.Services.AddSwaggerGen(c =>

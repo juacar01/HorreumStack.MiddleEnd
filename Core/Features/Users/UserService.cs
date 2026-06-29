@@ -22,16 +22,20 @@ public class UserService : IUserService
 
     public async Task<UserVm> GetUserByIdAsync(Guid id, CancellationToken cancellationToken)
     {
-        var includes = new List<Expression<Func<User, object>>>();
+        return await this.GetUserByIdAsync(id);
+    }
 
+    public async Task<UserVm> GetUserByIdAsync(Guid id)
+    {
         var user = await _unitOfWork.Repository<User>().GetEntityAsync(
             a => a.Id == id,
-            includes,
+            "ProyectoUsers.Proyecto",
             true
         );
 
         return _mapper.Map<UserVm>(user);
     }
+
 
     public async Task<UserVm> GetUserByEmailAsync(string email, CancellationToken cancellationToken)
     {
@@ -45,6 +49,8 @@ public class UserService : IUserService
 
         return _mapper.Map<UserVm>(user);
     }
+
+
 
     public async Task<Guid?> GetUserIdByTokenAsync(string token, CancellationToken cancellationToken)
     {

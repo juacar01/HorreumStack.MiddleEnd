@@ -86,6 +86,12 @@ public class ProyectosController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] ProyectoDto model)
     {
+        var token = Request.Headers["Authorization"];
+        Guid? userId = await _userService.GetUserIdByTokenAsync(token.ToString().Replace("Bearer ", ""), CancellationToken.None);
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
         if (string.IsNullOrEmpty(model.Codigo) || string.IsNullOrEmpty(model.Nombre))
         {
             return BadRequest("El código y el nombre son obligatorios.");
@@ -105,6 +111,14 @@ public class ProyectosController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid id)
     {
+
+        var token = Request.Headers["Authorization"];
+        Guid? userId = await _userService.GetUserIdByTokenAsync(token.ToString().Replace("Bearer ", ""), CancellationToken.None);
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
         var proyecto = await _unitOfWork.Repository<Proyecto>().GetEntityAsync(a => a.Id == id);
         if (proyecto == null)
         {

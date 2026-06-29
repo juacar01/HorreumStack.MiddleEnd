@@ -1,3 +1,5 @@
+using HorreumStack.MiddleEnd.Core.Features.Proyectos;
+
 namespace HorreumStack.MiddleEnd.Core.Features.Users;
 
 public class UserVm
@@ -10,9 +12,10 @@ public class UserVm
     public DateTime? CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 
+    public List<ProyectoDto> Proyectos { get; set; } = new List<ProyectoDto>();
+
     public string Fullname
     {
         get => Nombre + " " + Apellidos;
     }
-
 }
