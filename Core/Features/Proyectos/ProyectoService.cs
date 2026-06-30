@@ -149,11 +149,24 @@ public class ProyectoService : IProyectoService
             LastModifiedBy = userId.ToString()
         };
 
+        ItemTipo itemTipo = new ItemTipo
+        {
+            Id = Guid.NewGuid(),
+            Nombre = "Material",
+            Codigo = AppConstants.ItemTipos.PrefixCodigo + codigoGenerado,
+            ProyectoId = proyecto.Id,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = userId.ToString(),
+            LastModifiedAt = DateTime.UtcNow,
+            LastModifiedBy = userId.ToString()
+        };
+
         await _unitOfWork.Repository<Proyecto>().AddAsync(proyecto);
         await _unitOfWork.Repository<ProyectoUser>().AddAsync(userProyecto);
         await _unitOfWork.Repository<Almacen>().AddAsync(almacen);
         await _unitOfWork.Repository<UbicacionTipo>().AddAsync(ubicacionTipo);
         await _unitOfWork.Repository<Ubicacion>().AddAsync(ubicacion);
+        await _unitOfWork.Repository<ItemTipo>().AddAsync(itemTipo);
         await _unitOfWork.Complete();
 
         return _mapper.Map<ProyectoDto>(proyecto);

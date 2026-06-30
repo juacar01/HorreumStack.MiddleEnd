@@ -22,7 +22,7 @@ public class IsMineResolver : IValueResolver<Proyecto, ProyectoResponse, bool?>
         var httpContext = _httpContextAccessor.HttpContext;
         if (httpContext == null) return false;
 
-        string authorizationHeader = httpContext.Request.Headers["Authorization"];
+        string? authorizationHeader = httpContext.Request.Headers["Authorization"];
         if (string.IsNullOrEmpty(authorizationHeader)) return false;
 
         var token = authorizationHeader.Replace("Bearer ", "");

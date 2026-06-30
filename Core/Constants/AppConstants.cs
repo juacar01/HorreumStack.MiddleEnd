@@ -2,7 +2,7 @@ namespace HorreumStack.MiddleEnd.Core.Constants
 {
     public static class AppConstants
     {
-        public static object UbicacionesAlmacenes { get; internal set; }
+        public static object? UbicacionesAlmacenes { get; internal set; }
 
 
         public static class Roles
@@ -32,6 +32,14 @@ namespace HorreumStack.MiddleEnd.Core.Constants
         public static class UbicacionesTipos
         {
             public const string PrefixCodigo = "UTI-";
+        }
+        public static class ItemTipos
+        {
+            public const string PrefixCodigo = "ITI-";
+        }
+        public static class Items
+        {
+            public const string PrefixCodigo = "ITM-";
         }
 
 

@@ -10,6 +10,7 @@ namespace HorreumStack.MiddleEnd.Core.Features.Ubicaciones
         public string Descripcion { get; set; } = string.Empty;
         public string Direccion { get; set; } = string.Empty;
         public Guid AlmacenId { get; set; } = Guid.Empty;
+        public Guid? ubicacionTipoId { get; set; }
         public Guid UbicacionPadreId { get; set; } = Guid.Empty;
         public UbicacionResponse UbicacionPadre { get; set; } = null!;
         public Boolean IsPrincipal { get; set; } = false;
