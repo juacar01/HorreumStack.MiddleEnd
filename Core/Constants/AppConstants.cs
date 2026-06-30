@@ -41,6 +41,10 @@ namespace HorreumStack.MiddleEnd.Core.Constants
         {
             public const string PrefixCodigo = "ITM-";
         }
+        public static class UnidadMedidas
+        {
+            public const string PrefixCodigo = "UDM-";
+        }
 
 
     }

@@ -9,6 +9,7 @@ public class ItemDto
     public string Imagen { get; set; } = string.Empty;
     public Guid ProyectoId { get; set; }
     public Guid? ItemTipoId { get; set; }
+    public Guid? UnidadMedidaId { get; set; }
     public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastModifiedAt { get; set; }
     public string? CreatedBy { get; set; }

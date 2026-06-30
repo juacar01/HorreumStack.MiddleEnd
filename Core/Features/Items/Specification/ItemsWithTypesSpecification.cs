@@ -12,6 +12,7 @@ public class ItemsWithTypesSpecification : BaseSpecification<Item>
     {
         AddInclude(i => i.Proyecto!);
         AddInclude(i => i.ItemTipo!);
+        AddInclude(i => i.UnidadMedida!);
         AddOrderByDescending(i => i.CreatedAt!);
         ApplyPaging(pageSize * (pageIndex - 1), pageSize);
     }

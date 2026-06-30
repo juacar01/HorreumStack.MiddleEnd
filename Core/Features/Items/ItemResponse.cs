@@ -1,5 +1,6 @@
 using HorreumStack.MiddleEnd.Core.Features.Proyectos;
 using HorreumStack.MiddleEnd.Core.Features.ItemTipos;
+using HorreumStack.MiddleEnd.Core.Features.UnidadMedidas;
 
 namespace HorreumStack.MiddleEnd.Core.Features.Items;
 
@@ -14,6 +15,8 @@ public class ItemResponse
     public ProyectoResponse? Proyecto { get; set; }
     public Guid? ItemTipoId { get; set; }
     public ItemTipoResponse? ItemTipo { get; set; }
+    public Guid? UnidadMedidaId { get; set; }
+    public UnidadMedidaResponse? UnidadMedida { get; set; }
     public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastModifiedAt { get; set; }
 }

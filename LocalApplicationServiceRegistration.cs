@@ -7,6 +7,7 @@ using HorreumStack.MiddleEnd.Core.Features.UbicacionesTipos;
 using HorreumStack.MiddleEnd.Core.Features.ItemTipos;
 using HorreumStack.MiddleEnd.Core.Features.Items;
 using HorreumStack.MiddleEnd.Core.Features.Inventarios;
+using HorreumStack.MiddleEnd.Core.Features.UnidadMedidas;
 using HorreumStack.MiddleEnd.Core.Mappings;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -37,6 +38,7 @@ public static class ApplicationServiceRegistration
         services.AddScoped<IItemTipoService, ItemTipoService>();
         services.AddScoped<IItemService, ItemService>();
         services.AddScoped<IInventarioService, InventarioService>();
+        services.AddScoped<IUnidadMedidaService, UnidadMedidaService>();
 
 
         return services;

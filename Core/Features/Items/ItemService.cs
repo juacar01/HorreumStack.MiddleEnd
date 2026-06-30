@@ -60,7 +60,8 @@ public class ItemService : IItemService
         var includes = new List<Expression<Func<Item, object>>>
         {
             i => i.Proyecto!,
-            i => i.ItemTipo!
+            i => i.ItemTipo!,
+            i => i.UnidadMedida!
         };
 
         var item = await _unitOfWork.Repository<Item>().GetEntityAsync(
@@ -100,6 +101,7 @@ public class ItemService : IItemService
         existing.Descripcion = model.Descripcion;
         existing.Imagen = model.Imagen;
         existing.ItemTipoId = model.ItemTipoId;
+        existing.UnidadMedidaId = model.UnidadMedidaId;
         existing.LastModifiedAt = DateTime.UtcNow;
         existing.LastModifiedBy = model.LastModifiedBy ?? "System";
 
@@ -127,73 +129,216 @@ public class ItemService : IItemService
 
     public async Task<int> ImportItemsAsync(Guid proyectoId, Stream fileStream, string fileExtension, string createdBy)
     {
-        var excelType = fileExtension.Equals(".csv", StringComparison.OrdinalIgnoreCase) ? ExcelType.CSV : ExcelType.XLSX;
-        var rows = fileStream.Query(excelType: excelType).Cast<IDictionary<string, object>>().ToList();
+        var isCsv = fileExtension.Equals(".csv", StringComparison.OrdinalIgnoreCase);
         
-        if (!rows.Any()) return 0;
-
-        // Fetch existing item types for this project
+        // Cache collections for dynamic types and units
         var existingTypes = (await _unitOfWork.Repository<ItemTipo>().GetAsync(t => t.ProyectoId == proyectoId && !t.IsDeleted)).ToList();
-
+        var existingUnits = (await _unitOfWork.Repository<UnidadMedida>().GetAsync(u => u.ProyectoId == proyectoId && !u.IsDeleted)).ToList();
+        
         var itemsToAdd = new List<Item>();
         int importedCount = 0;
 
-        foreach (var row in rows)
+        if (isCsv)
         {
-            string nombre = GetValueFromRow(row, "Nombre");
-            if (string.IsNullOrEmpty(nombre)) continue; // Nombre is required
+            using var reader = new StreamReader(fileStream, System.Text.Encoding.UTF8);
+            var headerLine = await reader.ReadLineAsync();
+            if (string.IsNullOrEmpty(headerLine)) return 0;
 
-            string codigo = GetValueFromRow(row, "Codigo");
-            string descripcion = GetValueFromRow(row, "Descripcion");
-            string imagen = GetValueFromRow(row, "Imagen");
-            string tipoNombre = GetValueFromRow(row, "Tipo");
+            var headers = ParseCsvLine(headerLine, ';').Select(h => h.Trim()).ToList();
+            int indexNombre = headers.FindIndex(h => h.Equals("Nombre", StringComparison.OrdinalIgnoreCase));
+            int indexCodigo = headers.FindIndex(h => h.Equals("Codigo", StringComparison.OrdinalIgnoreCase));
+            int indexDescripcion = headers.FindIndex(h => h.Equals("Descripcion", StringComparison.OrdinalIgnoreCase));
+            int indexImagen = headers.FindIndex(h => h.Equals("Imagen", StringComparison.OrdinalIgnoreCase));
+            int indexTipo = headers.FindIndex(h => h.Equals("Tipo", StringComparison.OrdinalIgnoreCase));
+            int indexUnidad = headers.FindIndex(h => h.Equals("UnidadMedida", StringComparison.OrdinalIgnoreCase));
 
-            Guid? itemTipoId = null;
-            if (!string.IsNullOrEmpty(tipoNombre))
+            if (indexNombre < 0)
             {
-                var existingType = existingTypes.FirstOrDefault(t => t.Nombre.Equals(tipoNombre, StringComparison.OrdinalIgnoreCase));
-                if (existingType != null)
-                {
-                    itemTipoId = existingType.Id;
-                }
-                else
-                {
-                    // Create new ItemTipo dynamically
-                    var newType = new ItemTipo
-                    {
-                        Id = Guid.NewGuid(),
-                        Nombre = tipoNombre,
-                        Codigo = AppConstants.ItemTipos.PrefixCodigo + Guid.NewGuid().ToString().Substring(0, 8),
-                        ProyectoId = proyectoId,
-                        CreatedAt = DateTime.UtcNow,
-                        CreatedBy = createdBy,
-                        LastModifiedAt = DateTime.UtcNow,
-                        LastModifiedBy = createdBy
-                    };
-                    await _unitOfWork.Repository<ItemTipo>().AddAsync(newType);
-                    existingTypes.Add(newType); // Add to cache list
-                    itemTipoId = newType.Id;
-                }
+                throw new InvalidDataException("La columna 'Nombre' es requerida en el encabezado del archivo CSV.");
             }
 
-            var codigoGenerado = string.IsNullOrEmpty(codigo) ? Guid.NewGuid().ToString().Substring(0, 8) : codigo;
-            var item = new Item
+            string? line;
+            while ((line = await reader.ReadLineAsync()) != null)
             {
-                Id = Guid.NewGuid(),
-                Nombre = nombre,
-                Codigo = AppConstants.Items.PrefixCodigo + codigoGenerado.Replace(AppConstants.Items.PrefixCodigo, ""),
-                Descripcion = descripcion ?? "",
-                Imagen = imagen ?? "",
-                ProyectoId = proyectoId,
-                ItemTipoId = itemTipoId,
-                CreatedAt = DateTime.UtcNow,
-                CreatedBy = createdBy,
-                LastModifiedAt = DateTime.UtcNow,
-                LastModifiedBy = createdBy
-            };
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                var fields = ParseCsvLine(line, ';');
 
-            itemsToAdd.Add(item);
-            importedCount++;
+                string nombre = indexNombre < fields.Count ? StripWrappingQuotes(fields[indexNombre]) : "";
+                if (string.IsNullOrEmpty(nombre)) continue; // Nombre is required
+
+                string codigo = indexCodigo >= 0 && indexCodigo < fields.Count ? StripWrappingQuotes(fields[indexCodigo]) : "";
+                string descripcion = indexDescripcion >= 0 && indexDescripcion < fields.Count ? StripWrappingQuotes(fields[indexDescripcion]) : "";
+                string imagen = indexImagen >= 0 && indexImagen < fields.Count ? StripWrappingQuotes(fields[indexImagen]) : "";
+                string tipoNombre = indexTipo >= 0 && indexTipo < fields.Count ? StripWrappingQuotes(fields[indexTipo]) : "";
+                string unidadMedidaNombre = indexUnidad >= 0 && indexUnidad < fields.Count ? StripWrappingQuotes(fields[indexUnidad]) : "";
+
+                Guid? itemTipoId = null;
+                if (!string.IsNullOrEmpty(tipoNombre))
+                {
+                    var existingType = existingTypes.FirstOrDefault(t => t.Nombre.Equals(tipoNombre, StringComparison.OrdinalIgnoreCase));
+                    if (existingType != null)
+                    {
+                        itemTipoId = existingType.Id;
+                    }
+                    else
+                    {
+                        var newType = new ItemTipo
+                        {
+                            Id = Guid.NewGuid(),
+                            Nombre = tipoNombre,
+                            Codigo = AppConstants.ItemTipos.PrefixCodigo + Guid.NewGuid().ToString().Substring(0, 8),
+                            ProyectoId = proyectoId,
+                            CreatedAt = DateTime.UtcNow,
+                            CreatedBy = createdBy,
+                            LastModifiedAt = DateTime.UtcNow,
+                            LastModifiedBy = createdBy
+                        };
+                        await _unitOfWork.Repository<ItemTipo>().AddAsync(newType);
+                        existingTypes.Add(newType);
+                        itemTipoId = newType.Id;
+                    }
+                }
+
+                Guid? unidadMedidaId = null;
+                if (!string.IsNullOrEmpty(unidadMedidaNombre))
+                {
+                    var existingUnit = existingUnits.FirstOrDefault(u => u.Nombre.Equals(unidadMedidaNombre, StringComparison.OrdinalIgnoreCase));
+                    if (existingUnit != null)
+                    {
+                        unidadMedidaId = existingUnit.Id;
+                    }
+                    else
+                    {
+                        var newUnit = new UnidadMedida
+                        {
+                            Id = Guid.NewGuid(),
+                            Nombre = unidadMedidaNombre,
+                            Codigo = AppConstants.UnidadMedidas.PrefixCodigo + Guid.NewGuid().ToString().Substring(0, 8),
+                            ProyectoId = proyectoId,
+                            CreatedAt = DateTime.UtcNow,
+                            CreatedBy = createdBy,
+                            LastModifiedAt = DateTime.UtcNow,
+                            LastModifiedBy = createdBy
+                        };
+                        await _unitOfWork.Repository<UnidadMedida>().AddAsync(newUnit);
+                        existingUnits.Add(newUnit);
+                        unidadMedidaId = newUnit.Id;
+                    }
+                }
+
+                var codigoGenerado = string.IsNullOrEmpty(codigo) ? Guid.NewGuid().ToString().Substring(0, 8) : codigo;
+                var item = new Item
+                {
+                    Id = Guid.NewGuid(),
+                    Nombre = nombre,
+                    Codigo = AppConstants.Items.PrefixCodigo + codigoGenerado.Replace(AppConstants.Items.PrefixCodigo, ""),
+                    Descripcion = descripcion,
+                    Imagen = imagen,
+                    ProyectoId = proyectoId,
+                    ItemTipoId = itemTipoId,
+                    UnidadMedidaId = unidadMedidaId,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = createdBy,
+                    LastModifiedAt = DateTime.UtcNow,
+                    LastModifiedBy = createdBy
+                };
+
+                itemsToAdd.Add(item);
+                importedCount++;
+            }
+        }
+        else
+        {
+            // MiniExcel path for Excel binary files
+            var excelType = ExcelType.XLSX;
+            var rows = fileStream.Query(excelType: excelType).Cast<IDictionary<string, object>>().ToList();
+            if (!rows.Any()) return 0;
+
+            foreach (var row in rows)
+            {
+                string nombre = GetValueFromRow(row, "Nombre");
+                if (string.IsNullOrEmpty(nombre)) continue;
+
+                string codigo = GetValueFromRow(row, "Codigo");
+                string descripcion = GetValueFromRow(row, "Descripcion");
+                string imagen = GetValueFromRow(row, "Imagen");
+                string tipoNombre = GetValueFromRow(row, "Tipo");
+                string unidadMedidaNombre = GetValueFromRow(row, "UnidadMedida");
+
+                Guid? itemTipoId = null;
+                if (!string.IsNullOrEmpty(tipoNombre))
+                {
+                    var existingType = existingTypes.FirstOrDefault(t => t.Nombre.Equals(tipoNombre, StringComparison.OrdinalIgnoreCase));
+                    if (existingType != null)
+                    {
+                        itemTipoId = existingType.Id;
+                    }
+                    else
+                    {
+                        var newType = new ItemTipo
+                        {
+                            Id = Guid.NewGuid(),
+                            Nombre = tipoNombre,
+                            Codigo = AppConstants.ItemTipos.PrefixCodigo + Guid.NewGuid().ToString().Substring(0, 8),
+                            ProyectoId = proyectoId,
+                            CreatedAt = DateTime.UtcNow,
+                            CreatedBy = createdBy,
+                            LastModifiedAt = DateTime.UtcNow,
+                            LastModifiedBy = createdBy
+                        };
+                        await _unitOfWork.Repository<ItemTipo>().AddAsync(newType);
+                        existingTypes.Add(newType);
+                        itemTipoId = newType.Id;
+                    }
+                }
+
+                Guid? unidadMedidaId = null;
+                if (!string.IsNullOrEmpty(unidadMedidaNombre))
+                {
+                    var existingUnit = existingUnits.FirstOrDefault(u => u.Nombre.Equals(unidadMedidaNombre, StringComparison.OrdinalIgnoreCase));
+                    if (existingUnit != null)
+                    {
+                        unidadMedidaId = existingUnit.Id;
+                    }
+                    else
+                    {
+                        var newUnit = new UnidadMedida
+                        {
+                            Id = Guid.NewGuid(),
+                            Nombre = unidadMedidaNombre,
+                            Codigo = AppConstants.UnidadMedidas.PrefixCodigo + Guid.NewGuid().ToString().Substring(0, 8),
+                            ProyectoId = proyectoId,
+                            CreatedAt = DateTime.UtcNow,
+                            CreatedBy = createdBy,
+                            LastModifiedAt = DateTime.UtcNow,
+                            LastModifiedBy = createdBy
+                        };
+                        await _unitOfWork.Repository<UnidadMedida>().AddAsync(newUnit);
+                        existingUnits.Add(newUnit);
+                        unidadMedidaId = newUnit.Id;
+                    }
+                }
+
+                var codigoGenerado = string.IsNullOrEmpty(codigo) ? Guid.NewGuid().ToString().Substring(0, 8) : codigo;
+                var item = new Item
+                {
+                    Id = Guid.NewGuid(),
+                    Nombre = nombre,
+                    Codigo = AppConstants.Items.PrefixCodigo + codigoGenerado.Replace(AppConstants.Items.PrefixCodigo, ""),
+                    Descripcion = descripcion,
+                    Imagen = imagen,
+                    ProyectoId = proyectoId,
+                    ItemTipoId = itemTipoId,
+                    UnidadMedidaId = unidadMedidaId,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = createdBy,
+                    LastModifiedAt = DateTime.UtcNow,
+                    LastModifiedBy = createdBy
+                };
+
+                itemsToAdd.Add(item);
+                importedCount++;
+            }
         }
 
         if (itemsToAdd.Any())
@@ -213,8 +358,84 @@ public class ItemService : IItemService
         var key = row.Keys.FirstOrDefault(k => k.Equals(keyName, StringComparison.OrdinalIgnoreCase));
         if (key != null && row[key] != null)
         {
-            return row[key].ToString() ?? "";
+            return StripWrappingQuotes(row[key].ToString());
         }
         return "";
+    }
+
+    private string StripWrappingQuotes(string? value)
+    {
+        if (value == null) return "";
+        value = value.Trim();
+        if (value.Length >= 2)
+        {
+            if (value.StartsWith("\"") && value.EndsWith("\""))
+            {
+                value = value.Substring(1, value.Length - 2);
+            }
+            else if (value.StartsWith("'") && value.EndsWith("'"))
+            {
+                value = value.Substring(1, value.Length - 2);
+            }
+        }
+        return value;
+    }
+
+    private List<string> ParseCsvLine(string line, char separator)
+    {
+        var result = new List<string>();
+        var currentField = new System.Text.StringBuilder();
+        bool inQuotes = false;
+
+        for (int i = 0; i < line.Length; i++)
+        {
+            char c = line[i];
+            if (c == '"')
+            {
+                if (inQuotes)
+                {
+                    if (i + 1 < line.Length && line[i + 1] == '"')
+                    {
+                        currentField.Append('"');
+                        i++;
+                    }
+                    else
+                    {
+                        // Toggle off only if it's followed by a separator or end of line
+                        if (i + 1 == line.Length || line[i + 1] == separator)
+                        {
+                            inQuotes = false;
+                        }
+                        else
+                        {
+                            currentField.Append('"');
+                        }
+                    }
+                }
+                else
+                {
+                    // Toggle on only if it is the start of the field
+                    if (currentField.Length == 0)
+                    {
+                        inQuotes = true;
+                    }
+                    else
+                    {
+                        currentField.Append('"');
+                    }
+                }
+            }
+            else if (c == separator && !inQuotes)
+            {
+                result.Add(currentField.ToString());
+                currentField.Clear();
+            }
+            else
+            {
+                currentField.Append(c);
+            }
+        }
+        result.Add(currentField.ToString());
+        return result;
     }
 }

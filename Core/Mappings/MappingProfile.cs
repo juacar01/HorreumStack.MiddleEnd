@@ -8,6 +8,7 @@ using HorreumStack.MiddleEnd.Core.Features.ItemTipos;
 using HorreumStack.MiddleEnd.Core.Features.Items;
 using HorreumStack.MiddleEnd.Core.Features.Proyectos;
 using HorreumStack.MiddleEnd.Core.Features.Inventarios;
+using HorreumStack.MiddleEnd.Core.Features.UnidadMedidas;
 
 namespace HorreumStack.MiddleEnd.Core.Mappings;
 
@@ -46,6 +47,10 @@ public class MappingProfile : Profile
 
         CreateMap<Item, ItemDto>().ReverseMap();
         CreateMap<Item, ItemResponse>().ReverseMap();
+
+        CreateMap<UnidadMedida, UnidadMedidaDto>().ReverseMap();
+        CreateMap<UnidadMedida, UnidadMedidaResponse>().ReverseMap();
+        CreateMap<UnidadMedida, UnidadMedidaComboResponse>().ReverseMap();
 
         CreateMap<Inventario, InventarioResponse>().ReverseMap();
         CreateMap<InventarioMovimiento, InventarioMovimientoResponse>()
