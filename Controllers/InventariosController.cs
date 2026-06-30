@@ -29,6 +29,20 @@ public class InventariosController : ControllerBase
         return Ok(list);
     }
 
+    [HttpGet("almacen/{almacenId}")]
+    public async Task<IActionResult> GetInventarioByAlmacen(Guid almacenId, CancellationToken cancellationToken)
+    {
+        var list = await _inventarioService.GetInventarioByAlmacenAsync(almacenId, cancellationToken);
+        return Ok(list);
+    }
+
+    [HttpGet("proyecto/{proyectoId}")]
+    public async Task<IActionResult> GetInventarioByProyecto(Guid proyectoId, CancellationToken cancellationToken)
+    {
+        var list = await _inventarioService.GetInventarioByProyectoAsync(proyectoId, cancellationToken);
+        return Ok(list);
+    }
+
     [HttpGet("ubicacion/{ubicacionId}/movimientos")]
     public async Task<IActionResult> GetMovimientosByUbicacion(Guid ubicacionId, CancellationToken cancellationToken)
     {

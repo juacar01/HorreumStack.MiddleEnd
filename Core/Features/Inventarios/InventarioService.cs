@@ -195,4 +195,92 @@ public class InventarioService : IInventarioService
 
         await _unitOfWork.Complete();
     }
+
+    public async Task<List<AlmacenItemStockResponse>> GetInventarioByAlmacenAsync(Guid almacenId, CancellationToken cancellationToken)
+    {
+        var locations = await _unitOfWork.Repository<Ubicacion>().GetAsync(u => u.AlmacenId == almacenId && !u.IsDeleted);
+        var locationIds = locations.Select(l => l.Id).ToList();
+
+        if (!locationIds.Any())
+        {
+            return new List<AlmacenItemStockResponse>();
+        }
+
+        var includes = new List<Expression<Func<Inventario, object>>>
+        {
+            i => i.Item!,
+            i => i.Item!.ItemTipo!,
+            i => i.Item!.UnidadMedida!
+        };
+
+        var records = await _unitOfWork.Repository<Inventario>().GetAsync(
+            i => locationIds.Contains(i.UbicacionId) && i.Cantidad != 0,
+            orderBy: null,
+            includes: includes
+        );
+
+        var grouped = records
+            .GroupBy(i => i.ItemId)
+            .Select(g => new AlmacenItemStockResponse
+            {
+                ItemId = g.Key,
+                ItemNombre = g.First().Item?.Nombre ?? "Item desconocido",
+                ItemCodigo = g.First().Item?.Codigo ?? "",
+                ItemTipoNombre = g.First().Item?.ItemTipo?.Nombre ?? "--",
+                UnidadMedidaNombre = g.First().Item?.UnidadMedida?.Nombre ?? "--",
+                CantidadTotal = g.Sum(i => i.Cantidad),
+                Imagen = g.First().Item?.Imagen ?? ""
+            })
+            .ToList();
+
+        return grouped;
+    }
+
+    public async Task<List<AlmacenItemStockResponse>> GetInventarioByProyectoAsync(Guid proyectoId, CancellationToken cancellationToken)
+    {
+        var warehouses = await _unitOfWork.Repository<Almacen>().GetAsync(a => a.ProyectoId == proyectoId && !a.IsDeleted);
+        var warehouseIds = warehouses.Select(w => w.Id).ToList();
+
+        if (!warehouseIds.Any())
+        {
+            return new List<AlmacenItemStockResponse>();
+        }
+
+        var locations = await _unitOfWork.Repository<Ubicacion>().GetAsync(u => warehouseIds.Contains(u.AlmacenId) && !u.IsDeleted);
+        var locationIds = locations.Select(l => l.Id).ToList();
+
+        if (!locationIds.Any())
+        {
+            return new List<AlmacenItemStockResponse>();
+        }
+
+        var includes = new List<Expression<Func<Inventario, object>>>
+        {
+            i => i.Item!,
+            i => i.Item!.ItemTipo!,
+            i => i.Item!.UnidadMedida!
+        };
+
+        var records = await _unitOfWork.Repository<Inventario>().GetAsync(
+            i => locationIds.Contains(i.UbicacionId) && i.Cantidad != 0,
+            orderBy: null,
+            includes: includes
+        );
+
+        var grouped = records
+            .GroupBy(i => i.ItemId)
+            .Select(g => new AlmacenItemStockResponse
+            {
+                ItemId = g.Key,
+                ItemNombre = g.First().Item?.Nombre ?? "Item desconocido",
+                ItemCodigo = g.First().Item?.Codigo ?? "",
+                ItemTipoNombre = g.First().Item?.ItemTipo?.Nombre ?? "--",
+                UnidadMedidaNombre = g.First().Item?.UnidadMedida?.Nombre ?? "--",
+                CantidadTotal = g.Sum(i => i.Cantidad),
+                Imagen = g.First().Item?.Imagen ?? ""
+            })
+            .ToList();
+
+        return grouped;
+    }
 }

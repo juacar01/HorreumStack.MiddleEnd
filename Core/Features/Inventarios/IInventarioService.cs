@@ -12,4 +12,6 @@ public interface IInventarioService
     Task CargarStockAsync(Guid ubicacionId, CargarInventarioDto dto, string userEmail, CancellationToken cancellationToken);
     Task DescargarStockAsync(Guid ubicacionId, CargarInventarioDto dto, string userEmail, CancellationToken cancellationToken);
     Task MoverStockAsync(Guid ubicacionOrigenId, MoverInventarioDto dto, string userEmail, CancellationToken cancellationToken);
+    Task<List<AlmacenItemStockResponse>> GetInventarioByAlmacenAsync(Guid almacenId, CancellationToken cancellationToken);
+    Task<List<AlmacenItemStockResponse>> GetInventarioByProyectoAsync(Guid proyectoId, CancellationToken cancellationToken);
 }
