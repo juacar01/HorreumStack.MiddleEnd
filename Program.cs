@@ -9,8 +9,12 @@ using HorreumStack.MiddleEnd.Core.Mappings;
 using HorreumStack.Utilities.Security;
 using HorreumStack.MiddleEnd.Core.Application;
 using AutoMapper;
+using Azure.Communication.Email;
+using Azure.Storage.Blobs;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddMemoryCache();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 builder.Services.AddLocalApplicationServices(builder.Configuration);
 
@@ -58,6 +62,23 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         builder.Configuration.GetConnectionString("DefaultConnection"),
         b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)
     ));
+
+
+string? connectionString = builder.Configuration["AzureServices:CommunicationConnectionString"];
+if (string.IsNullOrEmpty(connectionString))
+{
+    throw new InvalidOperationException("AzureServices:CommunicationConnectionString configuration is missing or empty.");
+}
+builder.Services.AddSingleton(new EmailClient(connectionString));
+
+string? storageConn = builder.Configuration["AzureServices:StorageConnectionString"];
+if (string.IsNullOrEmpty(storageConn))
+{
+    throw new InvalidOperationException("AzureServices:StorageConnectionString configuration is missing or empty.");
+}
+// Esto inicializa el cliente con acceso total al almacenamiento privado
+builder.Services.AddSingleton(new BlobServiceClient(storageConn));
+
 
 // Configure CORS
 builder.Services.AddCors(options =>
