@@ -18,3 +18,6 @@
 # Rider and Resharper
 .idea/
 *.sln.iml
+
+# Docker local env file (generado por export-secrets-to-env.ps1)
+.env
